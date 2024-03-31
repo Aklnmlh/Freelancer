@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  cus_id        String?
+  balance       Int?           @default(0)
+  description   String?
+  type          UserType       @default(NOT_SET)
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  Jobs          Jobs[]
+  Message       Message[]
+  Conversation  Conversation[]
+}
+
+model Conversation {
+  id           String    @id @default(cuid())
+  participants User[]
+  messages     Message[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  fileUrl        String?
+  sender         User         @relation(fields: [senderId], references: [id])
+  senderId       String
+  body           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Jobs {
+  id          String    @id @default(cuid())
+  title       String?
+  description String?
+  price       Int?
+  category    String?
+  status      JobType   @default(WAITING_FOR_PAYMENT)
+  isTaken     Boolean   @default(false)
+  completed   Boolean   @default(false)
+  user        User      @relation(fields: [userId], references: [id])
+  missons     Mission[]
+  userId      String
+  takenById   String?
+}
+
+model Mission {
+  id        String  @unique @default(cuid())
+  name      String
+  price     Int
+  completed Boolean @default(false)
+  proof     String?
+  Jobs      Jobs?   @relation(fields: [jobsId], references: [id])
+  jobsId    String?
+}
+
+enum JobType {
+  WAITING_FOR_PAYMENT
+  PAID
+}
+
+enum UserType {
+  FREELANCER
+  EMPLOYER
+  NOT_SET
+}
